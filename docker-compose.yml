@@ -1,0 +1,13 @@
+services:
+  vectorizer:
+    build: .
+    image: aurora-vectorizer:latest
+    container_name: aurora-vectorizer
+    restart: unless-stopped
+    ports:
+      - "8000:8000"          # exponha só na rede interna/atrás de proxy se for sensível
+    # limite de memória opcional (opencv em imagem grande pede RAM)
+    deploy:
+      resources:
+        limits:
+          memory: 1g
