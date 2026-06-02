@@ -1,6 +1,8 @@
 # service.py — sidecar HTTP que sua API Next.js chama (mesmo contrato multipart).
 # Sobe com:  uvicorn service:app --host 0.0.0.0 --port 8000
 import os
+import numpy as np
+import cv2
 from fastapi import Depends, FastAPI, UploadFile, File, Form, Header, HTTPException
 from fastapi.responses import Response, JSONResponse
 from aurora_vectorizer import vectorize_to_svg, VectorizeOptions
@@ -29,8 +31,16 @@ async def vectorize(
     turdsize_text: int = Form(8),
     # split_y: -2 = automático (vão) | -1 = sem texto separado | >=0 = manual (px na imagem original)
     split_y: int = Form(-2),
+    invert_bg: bool = Form(False),
 ):
     data = await file.read()
+    # Fundo escuro: inverter imagem para que o motor veja fundo branco.
+    if invert_bg:
+        arr = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        if arr is not None:
+            arr = 255 - arr
+            _, buf = cv2.imencode('.png', arr)
+            data = buf.tobytes()
     opts = VectorizeOptions(
         saturation=saturation, stroke=stroke, stroke_width=stroke_width,
         capture_folds=capture_folds, color_separate_text=color_separate_text,
