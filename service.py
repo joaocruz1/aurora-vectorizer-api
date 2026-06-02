@@ -46,6 +46,7 @@ async def vectorize(
         capture_folds=capture_folds, color_separate_text=color_separate_text,
         fold_erode=fold_erode, turdsize_text=turdsize_text,
         split_y=(None if split_y == -2 else split_y),
+        fill_emblem_holes=not invert_bg,
     )
     try:
         svg = vectorize_to_svg(data, opts)
