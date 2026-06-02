@@ -35,10 +35,18 @@ async def vectorize(
 ):
     data = await file.read()
     # Fundo escuro: inverter imagem para que o motor veja fundo branco.
+    # Apos inversao, normaliza brilho para que o fundo fique branco puro (>240).
+    # Sem isso, fundos cinza escuro (~50) viram cinza claro (~205) apos 255-arr,
+    # e o ink detector (gray < 230) classifica o fundo como tinta → SVG vazio.
     if invert_bg:
         arr = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
         if arr is not None:
             arr = 255 - arr
+            gray = cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
+            bg_val = float(np.percentile(gray, 85))
+            if 100 < bg_val < 245:
+                scale = 255.0 / bg_val
+                arr = np.clip(arr.astype(np.float32) * scale, 0, 255).astype(np.uint8)
             _, buf = cv2.imencode('.png', arr)
             data = buf.tobytes()
     opts = VectorizeOptions(
