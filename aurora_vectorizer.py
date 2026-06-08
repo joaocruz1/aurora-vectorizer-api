@@ -53,6 +53,10 @@ class VectorizeOptions:
 
 def _potrace(mask255: np.ndarray, turd: int) -> list[str]:
     """Traça uma máscara (branco=tinta) e devolve os <path .../> (espaço potrace)."""
+    # Limpar bordas: impede shapes de tocar a borda da imagem,
+    # evitando o retângulo de fundo que potrace gera nesses casos.
+    mask255[0, :] = 0; mask255[-1, :] = 0
+    mask255[:, 0] = 0; mask255[:, -1] = 0
     with tempfile.TemporaryDirectory() as d:
         pbm, svg = os.path.join(d, "m.pbm"), os.path.join(d, "m.svg")
         cv2.imwrite(pbm, 255 - mask255)            # potrace traça preto
