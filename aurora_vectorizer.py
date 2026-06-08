@@ -172,6 +172,13 @@ def vectorize_to_svg(image_bytes: bytes, opts: VectorizeOptions | None = None) -
     S, Hue = hsv[:, :, 1], hsv[:, :, 0]
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     ink = (S > 50) | (gray < 230)
+    # Limpar margem de borda: artefatos de compressão (JPEG/AVIF/WebP) fazem
+    # pixels de fundo "quase branco" (gray 220-250) disparar o threshold.
+    # Sem essa limpeza o MORPH_CLOSE conecta esses pixels ao conteúdo,
+    # transformando a máscara inteira num bloco sólido.
+    margin = max(4, int(min(H_, W_) * 0.01))
+    ink[:margin, :] = False; ink[-margin:, :] = False
+    ink[:, :margin] = False; ink[:, -margin:] = False
 
     # corte emblema/texto
     if o.split_y is None:
