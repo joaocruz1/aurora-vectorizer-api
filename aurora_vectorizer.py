@@ -40,8 +40,8 @@ class VectorizeOptions:
     max_text_colors: int = 5
     # dobras internas
     capture_folds: bool = True
-    fold_erode: int = 11              # afasta as dobras da borda externa
-    fold_min_branch: int = 30
+    fold_erode: int = 15              # afasta as dobras da borda externa
+    fold_min_branch: int = 50
     fold_spline_smooth: float = 3.0
     fold_extend: int = 90             # alcance máx. da extensão das pontas
     fill_emblem_holes: bool = True
@@ -240,7 +240,7 @@ def vectorize_to_svg(image_bytes: bytes, opts: VectorizeOptions | None = None) -
                    boost[:, :, 2], lab[:, :, 1], lab[:, :, 2]]:
             ch = cv2.normalize(ch, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
             ch = cv2.bilateralFilter(ch, 9, 60, 60)
-            fused = np.maximum(fused, cv2.Canny(ch, 25, 70).astype(np.float32))
+            fused = np.maximum(fused, cv2.Canny(ch, 40, 100).astype(np.float32))
         fmap = cv2.bitwise_and(fused.astype(np.uint8),
                                cv2.erode(emb_mask, np.ones((o.fold_erode * UP, o.fold_erode * UP), np.uint8)))
         fmap = cv2.dilate(fmap, np.ones((3, 3), np.uint8), 2)
