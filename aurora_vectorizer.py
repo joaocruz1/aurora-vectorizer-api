@@ -40,7 +40,7 @@ class VectorizeOptions:
     max_text_colors: int = 5
     # dobras internas
     capture_folds: bool = True
-    fold_erode: int = 20              # afasta as dobras da borda externa
+    fold_erode: int = 15              # afasta as dobras da borda externa
     fold_min_branch: int = 70
     fold_spline_smooth: float = 5.0
     fold_extend: int = 90             # alcance máx. da extensão das pontas
@@ -75,8 +75,8 @@ def _clean(m: np.ndarray, min_area: int = 0) -> np.ndarray:
             if st[i, cv2.CC_STAT_AREA] >= min_area:
                 out[lab == i] = 255
         m = out
-    m = cv2.GaussianBlur(m, (0, 0), 0.8)
-    return (m > 100).astype(np.uint8) * 255
+    m = cv2.GaussianBlur(m, (0, 0), 1.2)
+    return (m > 110).astype(np.uint8) * 255
 
 
 def _auto_split(ink: np.ndarray) -> int | None:
@@ -196,15 +196,12 @@ def vectorize_to_svg(image_bytes: bytes, opts: VectorizeOptions | None = None) -
     emb = (ink.astype(np.uint8) * 255).copy()
     emb[split:] = 0
     if emb.any():
-        emb = cv2.morphologyEx(emb, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
-        # Usar máscara fechada (com holes preenchidos) apenas para fold detection,
-        # preservando a separação de penas na silhueta (potrace).
+        emb = cv2.morphologyEx(emb, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
         if o.fill_emblem_holes:
             ff = emb.copy(); mk = np.zeros((H_ + 2, W_ + 2), np.uint8)
             cv2.floodFill(ff, mk, (0, 0), 255)
-            emb_mask = emb | cv2.bitwise_not(ff)
-        else:
-            emb_mask = emb.copy()
+            emb = emb | cv2.bitwise_not(ff)
+        emb_mask = emb.copy()
         solid_paths += _potrace(_clean(emb), o.turdsize_emblem)
     else:
         emb_mask = np.zeros((H_, W_), np.uint8)
@@ -271,19 +268,7 @@ def vectorize_to_svg(image_bytes: bytes, opts: VectorizeOptions | None = None) -
                 except Exception:
                     xs, ys = pts[:, 0], pts[:, 1]
                 P = _extend_to_mask(list(zip(xs, ys)), emb_mask, max_ext=o.fold_extend)
-                # Re-sample: garantir espaçamento mínimo entre pontos para
-                # eliminar micro-segmentos que criam aparência pontilhada.
-                if len(P) > 2:
-                    resampled = [P[0]]
-                    for pt in P[1:]:
-                        dx, dy = pt[0]-resampled[-1][0], pt[1]-resampled[-1][1]
-                        if dx*dx + dy*dy >= 144:  # >= 12px
-                            resampled.append(pt)
-                    if len(resampled) > 1 and resampled[-1] != P[-1]:
-                        resampled.append(P[-1])  # manter ponto final
-                    P = resampled
-                if len(P) >= 4:
-                    folds.append(_catmull(P))
+                folds.append(_catmull(P))
 
     # ── monta SVG (potrace compartilha o mesmo transform → um grupo só) ──
     g = (f'<g transform="translate(0.000000,{H_}.000000) scale(1.000000,-1.000000)" '
