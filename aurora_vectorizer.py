@@ -41,8 +41,8 @@ class VectorizeOptions:
     # dobras internas
     capture_folds: bool = True
     fold_erode: int = 15              # afasta as dobras da borda externa
-    fold_min_branch: int = 50
-    fold_spline_smooth: float = 3.0
+    fold_min_branch: int = 70
+    fold_spline_smooth: float = 5.0
     fold_extend: int = 90             # alcance máx. da extensão das pontas
     fill_emblem_holes: bool = True
     # corte emblema/texto (None = automático por vão; -1 = sem texto separado)
@@ -257,14 +257,14 @@ def vectorize_to_svg(image_bytes: bytes, opts: VectorizeOptions | None = None) -
                 pts = np.array([(c, r) for r, c in co], float)
                 keep = [0]
                 for j in range(1, len(pts)):
-                    if np.hypot(*(pts[j] - pts[keep[-1]])) > 1.5:
+                    if np.hypot(*(pts[j] - pts[keep[-1]])) > 4.0:
                         keep.append(j)
                 pts = pts[keep]
                 if len(pts) < 6:
                     continue
                 try:
                     tck, _ = splprep([pts[:, 0], pts[:, 1]], s=len(pts) * o.fold_spline_smooth, k=3)
-                    xs, ys = splev(np.linspace(0, 1, max(24, len(pts) // 3)), tck)
+                    xs, ys = splev(np.linspace(0, 1, max(16, len(pts) // 5)), tck)
                 except Exception:
                     xs, ys = pts[:, 0], pts[:, 1]
                 P = _extend_to_mask(list(zip(xs, ys)), emb_mask, max_ext=o.fold_extend)
